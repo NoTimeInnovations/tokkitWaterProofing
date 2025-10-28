@@ -42,7 +42,7 @@ interface Task {
   place: string;
   district_id: string;
   status?: string;
-  district_name?: string;
+  district? : string;
   site_visit_payment?: string;
   notes?: string;
   tags?: Tag[];
@@ -52,7 +52,7 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [districts, setDistricts] = useState<District[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
-  const [selectedDistrict, setSelectedDistrict] = useState<string | null>(null);
+  const [selectedDistricts, setSelectedDistricts] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
@@ -73,10 +73,10 @@ export default function Home() {
 
   // Filter states for the sheet
   const [sheetStatusFilter, setSheetStatusFilter] = useState(statusFilter);
-  const [sheetSelectedTags, setSheetSelectedTags] = useState<string[]>(selectedTags);
-  const [sheetSelectedDistricts, setSheetSelectedDistricts] = useState<string[]>(
-    selectedDistrict ? [selectedDistrict] : []
-  );
+  const [sheetSelectedTags, setSheetSelectedTags] =
+    useState<string[]>(selectedTags);
+  const [sheetSelectedDistricts, setSheetSelectedDistricts] =
+    useState<string[]>(selectedDistricts);
 
   useEffect(() => {
     // Load saved filter state from localStorage, then fetch meta & tasks
@@ -85,15 +85,15 @@ export default function Home() {
       if (saved) {
         const s = JSON.parse(saved);
         setQuery(s.query || "");
-        setSelectedDistrict(s.selectedDistrict || null);
+        setSelectedDistricts(s.selectedDistricts || []);
         setSelectedTags(s.selectedTags || []);
         setStatusFilter(s.statusFilter || "all");
         setPage(s.page || 1);
-        
+
         // Initialize sheet filters
         setSheetStatusFilter(s.statusFilter || "all");
         setSheetSelectedTags(s.selectedTags || []);
-        setSheetSelectedDistricts(s.selectedDistrict ? [s.selectedDistrict] : []);
+        setSheetSelectedDistricts(s.selectedDistricts || []);
       }
     } catch (e) {
       // ignore JSON parse errors
@@ -112,122 +112,56 @@ export default function Home() {
   }
 
   const fetchTasks = async () => {
-    try {
-      setIsLoadingTasks(true);
-      let taskQ = supabase.from("tasks").select("*", { count: "exact" });
-      if (selectedDistrict) taskQ = taskQ.eq("district_id", selectedDistrict);
-      if (query) {
-        const q = `%${query}%`;
-        taskQ = taskQ.or(
-          `client_name.ilike.${q},place.ilike.${q},phone_number.ilike.${q}`
-        );
-      }
-      const from = (page - 1) * pageSize;
-      const to = from + pageSize - 1;
-      // Apply status filter if set
-      if (statusFilter && statusFilter !== "all") {
-        if (statusFilter === "completed") {
-          taskQ = taskQ.eq("status", "completed");
-        } else {
-          // not_completed: include null/other values by excluding 'completed'
-          taskQ = taskQ.not("status", "eq", "completed");
-        }
-      }
-      const {
-        data: tasksData,
-        error: tasksError,
-        count,
-      } = await taskQ.order("created_at", { ascending: false }).range(from, to);
-      if (tasksError) {
-        console.error("Error fetching tasks", tasksError);
-        setTasks([]);
-        setTotalTasks(0);
-        setIsLoadingTasks(false);
-        return;
-      }
-      const tasksList = tasksData || [];
-      setTotalTasks(count || 0);
+    let fetchQuery = supabase.from("tasks_full_data").select(`
+      *,
+      districts(*),
+      task_tags(
+        tag_id
+      )
+    `);
 
-      if (!tasksList.length) {
-        setTasks([]);
-        setIsLoadingTasks(false);
-        return;
-      }
-
-      const taskIds = tasksList.map((l: any) => l.id);
-      const { data: ttData } = await supabase
-        .from("task_tags")
-        .select("task_id,tag_id")
-        .in("task_id", taskIds);
-      const taskTags = ttData || [];
-
-      const tagIds = Array.from(
-        new Set((taskTags || []).map((r: any) => r.tag_id))
-      );
-      let tagsMap: Record<string, any> = {};
-      if (tagIds.length) {
-        const { data: tagsData, error: tagsError } = await supabase
-          .from("tags")
-          .select("*")
-          .in("id", tagIds);
-        if (tagsError) console.error("Error fetching tags", tagsError);
-        (tagsData || []).forEach((t: any) => (tagsMap[t.id] = t));
-      }
-
-      // Get all unique district IDs from the tasks
-      const districtIds = Array.from(
-        new Set(tasksList.map((l: any) => l.district_id))
-      );
-
-      // Fetch district names for these specific district IDs
-      const { data: districtsData } = await supabase
-        .from("districts")
-        .select("id, name")
-        .in("id", districtIds);
-
-      const districtMap: Record<string, string> = {};
-      (districtsData || []).forEach(
-        (d: District) => (districtMap[d.id] = d.name)
-      );
-
-      const tasksWithTags = tasksList.map((l: any) => {
-        const tagRows = taskTags.filter((r: any) => r.task_id === l.id);
-        const tagObjs = tagRows
-          .map((r: any) => tagsMap[r.tag_id])
-          .filter(Boolean);
-        return {
-          ...l,
-          tags: tagObjs,
-          district_name: districtMap[l.district_id] || "Unknown District",
-        };
-      });
-
-      let data = tasksWithTags;
-      if (selectedTags.length) {
-        data = data.filter((l: Task) => {
-          const taskTagNames = (l.tags || []).map((t: Tag) => t.name);
-          return selectedTags.every((st) => taskTagNames.includes(st));
-        });
-      }
-
-      setTasks(data);
-      setIsLoadingTasks(false);
-    } catch (err) {
-      console.error("Unexpected error in fetchTasks", err);
-      setTasks([]);
-      setIsLoadingTasks(false);
+    if (selectedDistricts.length > 0) {
+      fetchQuery = fetchQuery.in("district_id", selectedDistricts);
     }
+
+    if (selectedTags.length > 0) {
+      const { data: taskTags, error: tagsError } = await supabase
+        .from("task_tags")
+        .select("task_id")
+        .in("tag_id", selectedTags);
+
+      if (tagsError) throw tagsError;
+
+      if (taskTags && taskTags.length > 0) {
+        const taskIds = [...new Set(taskTags.map((tt) => tt.task_id))];
+        fetchQuery = fetchQuery.in("id", taskIds);
+      } else {
+        setTasks([]);
+        return;
+      }
+    }
+
+    if (statusFilter !== "all") {
+      fetchQuery = fetchQuery.eq("status", statusFilter);
+    }
+
+    if(query.trim()){
+      fetchQuery = fetchQuery.or("client_name.ilike.%"+query+"%,place.ilike.%"+query+"%,phone_number.ilike.%"+query+"%");
+    }
+
+    const { data, error } = await fetchQuery;
+
+    if (error) throw error;
+    setTasks(data || []);
   };
 
   useEffect(() => {
     fetchTasks();
-  }, [query, selectedDistrict, selectedTags, statusFilter]);
+  }, [query, selectedDistricts, selectedTags, statusFilter, page]);
+
   useEffect(() => {
     setPage(1);
-  }, [query, selectedDistrict, selectedTags, statusFilter]);
-  useEffect(() => {
-    fetchTasks();
-  }, [page]);
+  }, [query, selectedDistricts, selectedTags, statusFilter]);
 
   const handleDelete = async (taskId: string) => {
     if (!confirm("Delete this task?")) return;
@@ -237,7 +171,10 @@ export default function Home() {
 
   const markComplete = async (taskId: string) => {
     try {
-      await supabase.from("tasks").update({ status: "completed" }).eq("id", taskId);
+      await supabase
+        .from("tasks")
+        .update({ status: "completed" })
+        .eq("id", taskId);
       // optimistic UI: refresh list
       fetchTasks();
     } catch (err) {
@@ -257,29 +194,31 @@ export default function Home() {
   };
 
   // Toggle a tag in the selectedTags array
-  const toggleTag = (tagName: string) => {
+  const toggleTag = (tagId: string) => {
     setSelectedTags((prev) =>
-      prev.includes(tagName) ? prev.filter((t) => t !== tagName) : [...prev, tagName]
+      prev.includes(tagId) ? prev.filter((t) => t !== tagId) : [...prev, tagId]
     );
   };
 
   // Sheet filter handlers
-  const toggleSheetTag = (tagName: string) => {
+  const toggleSheetTag = (tagId: string) => {
     setSheetSelectedTags((prev) =>
-      prev.includes(tagName) ? prev.filter((t) => t !== tagName) : [...prev, tagName]
+      prev.includes(tagId) ? prev.filter((t) => t !== tagId) : [...prev, tagId]
     );
   };
 
   const toggleSheetDistrict = (districtId: string) => {
     setSheetSelectedDistricts((prev) =>
-      prev.includes(districtId) ? prev.filter((d) => d !== districtId) : [...prev, districtId]
+      prev.includes(districtId)
+        ? prev.filter((d) => d !== districtId)
+        : [...prev, districtId]
     );
   };
 
   const applyFilters = () => {
     setStatusFilter(sheetStatusFilter);
     setSelectedTags(sheetSelectedTags);
-    setSelectedDistrict(sheetSelectedDistricts.length > 0 ? sheetSelectedDistricts[0] : null);
+    setSelectedDistricts(sheetSelectedDistricts);
     setShowFilterSheet(false);
     setPage(1);
   };
@@ -294,25 +233,23 @@ export default function Home() {
     let count = 0;
     if (statusFilter !== "all") count++;
     if (selectedTags.length > 0) count++;
-    if (selectedDistrict) count++;
+    if (selectedDistricts.length > 0) count++;
     return count;
   };
 
-  // Persist filters/search state to localStorage
   useEffect(() => {
     try {
       const payload = {
         query,
-        selectedDistrict,
+        selectedDistricts,
         selectedTags,
         statusFilter,
         page,
       };
       localStorage.setItem("tasks_filters_v1", JSON.stringify(payload));
     } catch (e) {
-      // ignore storage errors
     }
-  }, [query, selectedDistrict, selectedTags, statusFilter, page]);
+  }, [query, selectedDistricts, selectedTags, statusFilter, page]);
 
   if (panelMode !== "none") {
     return (
@@ -353,7 +290,7 @@ export default function Home() {
             />
           )}
 
-            {(panelMode === "add" || panelMode === "edit") && (
+          {(panelMode === "add" || panelMode === "edit") && (
             <TaskForm
               task={panelMode === "edit" ? editTask : undefined}
               onSaved={() => {
@@ -378,7 +315,7 @@ export default function Home() {
       {/* Filter Sheet Overlay */}
       {showFilterSheet && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50">
-          <div className="absolute right-0 top-0 h-full w-80 bg-white dark:bg-slate-800 shadow-lg overflow-y-auto">
+          <div className="absolute right-0 top-0 h-full w-90 bg-white dark:bg-slate-800 shadow-lg overflow-y-auto">
             <div className="p-4 border-b border-slate-200 dark:border-slate-700">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
@@ -411,7 +348,9 @@ export default function Home() {
                         name="status"
                         value={option.value}
                         checked={sheetStatusFilter === option.value}
-                        onChange={(e) => setSheetStatusFilter(e.target.value as any)}
+                        onChange={(e) =>
+                          setSheetStatusFilter(e.target.value as any)
+                        }
                         className="mr-2"
                       />
                       <span className="text-sm text-slate-700 dark:text-slate-300">
@@ -429,13 +368,20 @@ export default function Home() {
                 </h3>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {tags.map((tag) => (
-                    <label key={tag.id} className="flex items-center">
+                    <label
+                      key={tag.id}
+                      className="flex items-center gap-2 mb-2"
+                    >
                       <input
                         type="checkbox"
-                        checked={sheetSelectedTags.includes(tag.name)}
-                        onChange={() => toggleSheetTag(tag.name)}
+                        checked={sheetSelectedTags.includes(tag.id)}
+                        onChange={() => toggleSheetTag(tag.id)}
                         className="mr-2"
                       />
+                      <span
+                        className="w-3 h-3 rounded-full inline-block"
+                        style={{ backgroundColor: tag.color }}
+                      ></span>
                       <span className="text-sm text-slate-700 dark:text-slate-300">
                         {tag.name}
                       </span>
@@ -505,7 +451,7 @@ export default function Home() {
         </div>
         <div className="flex items-center gap-2">
           <Button
-              onClick={() => {
+            onClick={() => {
               setPanelMode("add");
               setEditTask(null);
             }}
@@ -572,11 +518,14 @@ export default function Home() {
         </div>
 
         {/* Active filters display */}
-        {(statusFilter !== "all" || selectedTags.length > 0 || selectedDistrict) && (
+        {(statusFilter !== "all" ||
+          selectedTags.length > 0 ||
+          selectedDistricts.length > 0) && (
           <div className="flex flex-wrap gap-2 mt-3">
             {statusFilter !== "all" && (
               <span className="inline-flex items-center px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs">
-                Status: {statusFilter === "completed" ? "Completed" : "Not Completed"}
+                Status:{" "}
+                {statusFilter === "completed" ? "Completed" : "Not Completed"}
                 <button
                   onClick={() => setStatusFilter("all")}
                   className="ml-1 hover:text-blue-600"
@@ -585,8 +534,8 @@ export default function Home() {
                 </button>
               </span>
             )}
-            {selectedTags.map(tagName => {
-              const tag = tags.find(t => t.name === tagName);
+            {selectedTags.map((tagId) => {
+              const tag = tags.find((t) => t.id === tagId);
               return tag ? (
                 <span
                   key={tag.id}
@@ -598,7 +547,7 @@ export default function Home() {
                 >
                   {tag.name}
                   <button
-                    onClick={() => toggleTag(tag.name)}
+                    onClick={() => toggleTag(tag.id)}
                     className="ml-1 hover:opacity-70"
                   >
                     <X className="w-3 h-3" />
@@ -606,24 +555,34 @@ export default function Home() {
                 </span>
               ) : null;
             })}
-            {selectedDistrict && (
-              <span className="inline-flex items-center px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-full text-xs">
-                District: {districts.find(d => d.id === selectedDistrict)?.name}
-                <button
-                  onClick={() => setSelectedDistrict(null)}
-                  className="ml-1 hover:text-slate-600"
+            {selectedDistricts.map((districtId) => {
+              const district = districts.find((d) => d.id === districtId);
+              return district ? (
+                <span
+                  key={district.id}
+                  className="inline-flex items-center px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-full text-xs"
                 >
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            )}
+                  {district.name}
+                  <button
+                    onClick={() =>
+                      setSelectedDistricts((prev) =>
+                        prev.filter((d) => d !== districtId)
+                      )
+                    }
+                    className="ml-1 hover:text-slate-600"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ) : null;
+            })}
           </div>
         )}
       </div>
 
       {/* Mobile Cards - Only show on mobile */}
       <div className="lg:hidden space-y-2">
-  {tasks.length === 0 ? (
+        {tasks.length === 0 ? (
           <div className="bg-white dark:bg-slate-800 rounded-lg p-6 text-center border border-slate-200 dark:border-slate-700">
             <Search className="w-8 h-8 mx-auto mb-2 text-slate-400" />
             <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">
@@ -633,7 +592,7 @@ export default function Home() {
               Adjust your search or filters
             </p>
           </div>
-  ) : isLoadingTasks ? (
+        ) : isLoadingTasks ? (
           <div className="bg-white dark:bg-slate-800 rounded-lg p-4 text-center border border-slate-200 dark:border-slate-700">
             <div className="text-sm text-slate-600 dark:text-slate-400">
               Loading...
@@ -642,13 +601,13 @@ export default function Home() {
         ) : (
           tasks.map((task) => (
             <div
-                key={task.id}
+              key={task.id}
               className={`relative bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden ${
-                task.status === 'completed' ? 'opacity-60' : ''
+                task.status === "completed" ? "opacity-60" : ""
               }`}
             >
               {/* Mark complete button (top-right) */}
-              {task.status !== 'completed' && task.status === 'pending' && (
+              {task.status !== "completed" && task.status === "pending" && (
                 <button
                   onClick={() => markComplete(task.id)}
                   className="absolute top-2 right-2 bg-green-600 hover:bg-green-700 text-white h-7 px-2 rounded text-xs flex items-center gap-1"
@@ -668,7 +627,7 @@ export default function Home() {
                     <div className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-400 mt-0.5">
                       <MapPin className="w-3 h-3" />
                       <span className="truncate">
-                        {task.place}, {task.district_name}
+                        {task.place}, {task?.district}
                       </span>
                     </div>
                   </div>
@@ -706,7 +665,8 @@ export default function Home() {
                     </span>
                   </div>
                 ) : (
-                  task.tags && task.tags.length > 0 && (
+                  task.tags &&
+                  task.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-3">
                       {task.tags.map((tag) => (
                         <span
@@ -771,7 +731,7 @@ export default function Home() {
                           District
                         </div>
                         <div className="text-slate-600 dark:text-slate-400">
-                          {task.district_name}
+                          {task.district}
                         </div>
                       </div>
                     </div>
@@ -907,9 +867,11 @@ export default function Home() {
             <tbody>
               {tasks.map((task) => (
                 <tr
-                    key={task.id}
-                    className={`${task.status === 'completed' ? 'opacity-60' : ''} hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors`}
-                  >
+                  key={task.id}
+                  className={`${
+                    task.status === "completed" ? "opacity-60" : ""
+                  } hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors`}
+                >
                   <td className="px-3 py-2 border-b border-slate-200 dark:border-slate-700">
                     <div className="font-medium text-slate-900 dark:text-white">
                       {task.client_name}
@@ -929,51 +891,52 @@ export default function Home() {
                     {task.place}
                   </td>
                   <td className="px-3 py-2 border-b border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400">
-                    {task.district_name}
+                    {task.district}
                   </td>
                   <td className="px-3 py-2 border-b border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400">
                     {task.site_visit_payment || "-"}
                   </td>
                   <td className="px-3 py-2 border-b border-slate-200 dark:border-slate-700">
                     <div className="flex flex-wrap gap-1">
-                        {task.status === 'completed' ? (
+                      {task.status === "completed" ? (
+                        <span
+                          className="px-1.5 py-0.5 text-xs rounded-full"
+                          style={{
+                            backgroundColor: "#10b981",
+                            color: getContrastColor("#10b981"),
+                          }}
+                        >
+                          Completed
+                        </span>
+                      ) : (
+                        (task.tags || []).map((tag) => (
                           <span
+                            key={tag.id}
                             className="px-1.5 py-0.5 text-xs rounded-full"
                             style={{
-                              backgroundColor: '#10b981',
-                              color: getContrastColor('#10b981'),
+                              backgroundColor: tag.color || undefined,
+                              color: getContrastColor(tag.color || undefined),
                             }}
                           >
-                            Completed
+                            {tag.name}
                           </span>
-                        ) : (
-                          (task.tags || []).map((tag) => (
-                            <span
-                              key={tag.id}
-                              className="px-1.5 py-0.5 text-xs rounded-full"
-                              style={{
-                                backgroundColor: tag.color || undefined,
-                                color: getContrastColor(tag.color || undefined),
-                              }}
-                            >
-                              {tag.name}
-                            </span>
-                          ))
-                        )}
-                      </div>
+                        ))
+                      )}
+                    </div>
                   </td>
                   <td className="px-3 py-2 border-b border-slate-200 dark:border-slate-700">
                     <div className="flex gap-1">
-                      {task.status !== 'completed' && task.status === 'pending' && (
-                        <button
-                          onClick={() => markComplete(task.id)}
-                          className="flex items-center gap-1 px-2 py-1 bg-green-600 hover:bg-green-700 rounded text-white text-xs font-medium"
-                          title="Mark as complete"
-                        >
-                          <Check className="w-3 h-3" />
-                          Complete
-                        </button>
-                      )}
+                      {task.status !== "completed" &&
+                        task.status === "pending" && (
+                          <button
+                            onClick={() => markComplete(task.id)}
+                            className="flex items-center gap-1 px-2 py-1 bg-green-600 hover:bg-green-700 rounded text-white text-xs font-medium"
+                            title="Mark as complete"
+                          >
+                            <Check className="w-3 h-3" />
+                            Complete
+                          </button>
+                        )}
                       <button
                         onClick={() => handleCall(task.phone_number)}
                         className="flex items-center gap-1 px-2 py-1 bg-green-500 hover:bg-green-600 rounded transition-colors text-white text-xs font-medium"
@@ -1008,7 +971,7 @@ export default function Home() {
 
         {/* Desktop Pagination */}
         <div className="px-3 py-2 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs">
-            <div className="text-slate-600 dark:text-slate-400">
+          <div className="text-slate-600 dark:text-slate-400">
             {totalTasks} results
           </div>
           <div className="flex items-center gap-2">

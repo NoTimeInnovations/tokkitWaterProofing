@@ -1,6 +1,3 @@
--- Supabase schema for Tokkit Waterproofing
--- Creates districts, staff, tags, leads, lead_tags
--- Run this in Supabase SQL editor or with psql against your Supabase Postgres DB
 
 -- Enable useful extensions
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
@@ -12,8 +9,6 @@ CREATE TABLE IF NOT EXISTS public.districts (
   name text NOT NULL UNIQUE
 );
 
--- Staff table
-
 
 -- Tags table (user-manageable tags with a color token or CSS class)
 CREATE TABLE IF NOT EXISTS public.tags (
@@ -22,8 +17,8 @@ CREATE TABLE IF NOT EXISTS public.tags (
   color text -- store a Polaris token, Tailwind class, or hex code
 );
 
--- Leads main table
-CREATE TABLE IF NOT EXISTS public.leads (
+-- Tasks main table
+CREATE TABLE IF NOT EXISTS public.tasks (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   created_at timestamptz NOT NULL DEFAULT now(),
   entry_date date,
@@ -33,54 +28,80 @@ CREATE TABLE IF NOT EXISTS public.leads (
   district_id uuid REFERENCES public.districts(id) ON DELETE SET NULL,
   site_visit_payment text,
   notes text,
-  -- latitude and longitude removed intentionally
-  -- longitude and latitude columns were removed in a migration
+  status text
 );
 
--- Join table for many-to-many between leads and tags
-CREATE TABLE IF NOT EXISTS public.lead_tags (
-  lead_id uuid NOT NULL REFERENCES public.leads(id) ON DELETE CASCADE,
+-- Join table for many-to-many between tasks and tags
+CREATE TABLE IF NOT EXISTS public.task_tags (
+  task_id uuid NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
   tag_id uuid NOT NULL REFERENCES public.tags(id) ON DELETE CASCADE,
-  PRIMARY KEY (lead_id, tag_id)
+  PRIMARY KEY (task_id, tag_id)
 );
 
 -- Indexes to speed up common queries and global search
-CREATE INDEX IF NOT EXISTS idx_leads_client_name ON public.leads (client_name);
-CREATE INDEX IF NOT EXISTS idx_leads_phone_number ON public.leads (phone_number);
-CREATE INDEX IF NOT EXISTS idx_leads_place ON public.leads (place);
-CREATE INDEX IF NOT EXISTS idx_leads_district ON public.leads (district_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_client_name ON public.tasks (client_name);
+CREATE INDEX IF NOT EXISTS idx_tasks_phone_number ON public.tasks (phone_number);
+CREATE INDEX IF NOT EXISTS idx_tasks_place ON public.tasks (place);
+CREATE INDEX IF NOT EXISTS idx_tasks_district ON public.tasks (district_id);
 
 -- Full-text search index (searches client_name, place, phone_number)
 DO $$
 BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND indexname = 'idx_leads_search_tsv'
+    SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND indexname = 'idx_tasks_search_tsv'
   ) THEN
-    CREATE INDEX idx_leads_search_tsv ON public.leads USING gin (
+    CREATE INDEX idx_tasks_search_tsv ON public.tasks USING gin (
       to_tsvector('simple', coalesce(client_name,'') || ' ' || coalesce(place,'') || ' ' || coalesce(phone_number,''))
     );
   END IF;
 END$$;
 
--- Optional sample seed data for tags (you can change colors to Polaris tokens or Tailwind classes)
-INSERT INTO public.tags (name, color)
-  SELECT * FROM (VALUES
-    ('Urgent','#ef4444'),
-    ('Completed','#10b981'),
-    ('Cancelled','#6b7280')
-  ) AS v(name,color)
-  WHERE NOT EXISTS (SELECT 1 FROM public.tags WHERE name = v.name);
 
--- NOTE: Districts should contain the Kerala districts + "Other State". Add them via SQL INSERTs or the Supabase UI.
 
--- Helpful view: lead with tags aggregated (for UI queries)
-CREATE MATERIALIZED VIEW IF NOT EXISTS public.leads_with_tags AS
+
+
+
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS public.tasks_full_data AS
 SELECT
   l.*, 
-  json_agg(json_build_object('id', t.id, 'name', t.name, 'color', t.color) ORDER BY t.name) FILTER (WHERE t.id IS NOT NULL) AS tags
-FROM public.leads l
-LEFT JOIN public.lead_tags lt ON lt.lead_id = l.id
+  json_agg(json_build_object('id', t.id, 'name', t.name, 'color', t.color) ORDER BY t.name) FILTER (WHERE t.id IS NOT NULL) AS tags,
+  d.name as district  -- Changed to text instead of JSON object
+FROM public.tasks l
+LEFT JOIN public.task_tags lt ON lt.task_id = l.id
 LEFT JOIN public.tags t ON t.id = lt.tag_id
-GROUP BY l.id;
+LEFT JOIN public.districts d ON d.id = l.district_id
+GROUP BY l.id, d.name;  -- Added d.name to GROUP BY
 
--- You can refresh the materialized view after bulk inserts with: REFRESH MATERIALIZED VIEW public.leads_with_tags;
+-- Create unique index for concurrent refresh (PostgreSQL 12+)
+CREATE UNIQUE INDEX IF NOT EXISTS tasks_full_data_id_idx ON public.tasks_full_data (id);
+
+
+-- Refresh function with concurrent refresh
+CREATE OR REPLACE FUNCTION refresh_tasks_full_data()
+RETURNS trigger AS $$
+BEGIN
+    REFRESH MATERIALIZED VIEW CONCURRENTLY public.tasks_full_data;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create triggers to auto-refresh when underlying data changes
+CREATE OR REPLACE TRIGGER refresh_tasks_full_data_after_tasks
+    AFTER INSERT OR UPDATE OR DELETE ON public.tasks
+    EXECUTE FUNCTION refresh_tasks_full_data();
+
+CREATE OR REPLACE TRIGGER refresh_tasks_full_data_after_task_tags
+    AFTER INSERT OR UPDATE OR DELETE ON public.task_tags
+    EXECUTE FUNCTION refresh_tasks_full_data();
+
+CREATE OR REPLACE TRIGGER refresh_tasks_full_data_after_tags
+    AFTER INSERT OR UPDATE OR DELETE ON public.tags
+    EXECUTE FUNCTION refresh_tasks_full_data();
+
+CREATE OR REPLACE TRIGGER refresh_tasks_full_data_after_districts
+    AFTER INSERT OR UPDATE OR DELETE ON public.districts
+    EXECUTE FUNCTION refresh_tasks_full_data();
+
+-- Initial refresh
+REFRESH MATERIALIZED VIEW CONCURRENTLY public.tasks_full_data;
