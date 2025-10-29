@@ -236,7 +236,7 @@ export default function AdminHome({
   // Show TaskForm component if in createTask mode
   if (viewMode === "createTask") {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-3">
+      <div className="min-h-dvh bg-slate-50 dark:bg-slate-900 p-3">
         <div className="mb-3 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-slate-900 dark:text-white">
@@ -273,7 +273,7 @@ export default function AdminHome({
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-3 pb-32">
+    <div className="min-h-dvh bg-slate-50 dark:bg-slate-900 p-3 pb-32">
       {/* Compact Header */}
       <div className="mb-3 flex items-center justify-between">
         <div>
