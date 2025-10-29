@@ -262,10 +262,18 @@ export default function Home({
 
   const markComplete = async (taskId: string) => {
     try {
+      // Remove all tags associated with this task
+      await supabase
+        .from("task_tags")
+        .delete()
+        .eq("task_id", taskId);
+
+      // Mark task as completed
       await supabase
         .from("tasks")
         .update({ status: "completed" })
         .eq("id", taskId);
+      
       // optimistic UI: refresh list
       fetchTasks();
     } catch (err) {
