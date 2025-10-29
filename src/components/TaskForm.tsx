@@ -31,6 +31,7 @@ export default function TaskForm({
   const [siteVisitPayment, setSiteVisitPayment] = useState(task?.site_visit_payment || "");
   const [notes, setNotes] = useState(task?.notes || prefilledData?.notes || "");
   const [status, setStatus] = useState<string>(task?.status || "pending");
+  const [staff, setStaff] = useState(task?.staff || "");
   const [entryDate, setEntryDate] = useState<string>(
     task?.entry_date || new Date().toISOString().split('T')[0]
   );
@@ -57,11 +58,13 @@ export default function TaskForm({
       setSiteVisitPayment(task.site_visit_payment || "");
       setNotes(task.notes || "");
       setStatus(task.status || "pending");
+      setStaff(task.staff || "");
       setEntryDate(task.entry_date || new Date().toISOString().split('T')[0]);
     } else if (prefilledData) {
       // Use prefilled data when creating new task from call history
       setPhone(prefilledData.phone || "");
       setNotes(prefilledData.notes || "");
+      setStaff("");
       setEntryDate(new Date().toISOString().split('T')[0]);
       // Set default tag to "pending" for new tasks
       const pendingTag = tags.find(t => t.name.toLowerCase() === "pending");
@@ -74,6 +77,7 @@ export default function TaskForm({
       setPhone("");
       setPlace("");
       setDistrictId(null);
+      setStaff("");
       setEntryDate(new Date().toISOString().split('T')[0]);
       // Set default tag to "pending" for new tasks
       const pendingTag = tags.find(t => t.name.toLowerCase() === "pending");
@@ -118,6 +122,7 @@ export default function TaskForm({
             site_visit_payment: siteVisitPayment,
             notes,
             status,
+            staff,
             entry_date: entryDate,
           })
           .eq("id", task.id);
@@ -161,6 +166,7 @@ export default function TaskForm({
             site_visit_payment: siteVisitPayment,
             notes,
             status,
+            staff,
             entry_date: entryDate,
           })
           .select("id")
@@ -246,6 +252,24 @@ export default function TaskForm({
             onChange={(e) => setPhone(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="Enter phone number"
+            className="pl-10 h-10"
+          />
+        </div>
+      </div>
+
+      {/* Staff Name */}
+      <div className="space-y-2">
+        <Label htmlFor="staff" className="text-sm font-medium">
+          Staff Name
+        </Label>
+        <div className="relative">
+          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Input
+            id="staff"
+            value={staff}
+            onChange={(e) => setStaff(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Enter staff name"
             className="pl-10 h-10"
           />
         </div>

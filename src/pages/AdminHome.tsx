@@ -451,14 +451,14 @@ export default function AdminHome({
                               <div className="flex gap-2">
                                 <button
                                   onClick={() => handleCall(item.phone_number)}
-                                  className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-green-500 hover:bg-green-600 rounded-lg transition-colors text-white text-xs font-medium"
+                                  className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-green-500 hover:bg-green-600 rounded-lg transition-colors text-white text-xs font-medium cursor-pointer"
                                 >
                                   <Phone className="w-3.5 h-3.5" />
                                   Call
                                 </button>
                                 <button
                                   onClick={() => handleEdit(item)}
-                                  className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors text-white text-xs font-medium"
+                                  className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors text-white text-xs font-medium cursor-pointer"
                                 >
                                   <Edit2 className="w-3.5 h-3.5" />
                                   Edit
@@ -466,7 +466,7 @@ export default function AdminHome({
                                 {!relatedTask ? (
                                   <button
                                     onClick={() => handleCreateTask(item)}
-                                    className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-green-600 hover:bg-green-700 rounded-lg transition-colors text-white text-xs font-medium"
+                                    className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-green-600 hover:bg-green-700 rounded-lg transition-colors text-white text-xs font-medium cursor-pointer"
                                   >
                                     <Plus className="w-3.5 h-3.5" />
                                     Task
@@ -474,7 +474,7 @@ export default function AdminHome({
                                 ) : (
                                   <button
                                     onClick={() => onViewTask?.(relatedTask.id)}
-                                    className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-white text-xs font-medium"
+                                    className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-white text-xs font-medium cursor-pointer"
                                   >
                                     <Eye className="w-3.5 h-3.5" />
                                     View
@@ -482,7 +482,7 @@ export default function AdminHome({
                                 )}
                                 <button
                                   onClick={() => handleDelete(item.id)}
-                                  className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-red-500 hover:bg-red-600 rounded-lg transition-colors text-white text-xs font-medium"
+                                  className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-red-500 hover:bg-red-600 rounded-lg transition-colors text-white text-xs font-medium cursor-pointer"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                   Delete
@@ -671,14 +671,14 @@ export default function AdminHome({
                             <div className="flex gap-1">
                               <button
                                 onClick={() => handleCall(item.phone_number)}
-                                className="flex items-center gap-1 px-2 py-1 bg-green-500 hover:bg-green-600 rounded transition-colors text-white text-xs font-medium"
+                                className="flex items-center gap-1 px-2 py-1 bg-green-500 hover:bg-green-600 rounded transition-colors text-white text-xs font-medium cursor-pointer"
                               >
                                 <Phone className="w-3 h-3" />
                                 Call
                               </button>
                               <button
                                 onClick={() => handleEdit(item)}
-                                className="flex items-center gap-1 px-2 py-1 bg-blue-500 hover:bg-blue-600 rounded transition-colors text-white text-xs font-medium"
+                                className="flex items-center gap-1 px-2 py-1 bg-blue-500 hover:bg-blue-600 rounded transition-colors text-white text-xs font-medium cursor-pointer"
                               >
                                 <Edit2 className="w-3 h-3" />
                                 Edit
@@ -686,7 +686,7 @@ export default function AdminHome({
                               {!relatedTask ? (
                                 <button
                                   onClick={() => handleCreateTask(item)}
-                                  className="flex items-center gap-1 px-2 py-1 bg-green-600 hover:bg-green-700 rounded transition-colors text-white text-xs font-medium"
+                                  className="flex items-center gap-1 px-2 py-1 bg-green-600 hover:bg-green-700 rounded transition-colors text-white text-xs font-medium cursor-pointer"
                                 >
                                   <Plus className="w-3 h-3" />
                                   Task
@@ -694,7 +694,7 @@ export default function AdminHome({
                               ) : (
                                 <button
                                   onClick={() => onViewTask?.(relatedTask.id)}
-                                  className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded transition-colors text-white text-xs font-medium"
+                                  className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded transition-colors text-white text-xs font-medium cursor-pointer"
                                 >
                                   <Eye className="w-3 h-3" />
                                   View
@@ -702,7 +702,7 @@ export default function AdminHome({
                               )}
                               <button
                                 onClick={() => handleDelete(item.id)}
-                                className="flex items-center gap-1 px-2 py-1 bg-red-500 hover:bg-red-600 rounded transition-colors text-white text-xs font-medium"
+                                className="flex items-center gap-1 px-2 py-1 bg-red-500 hover:bg-red-600 rounded transition-colors text-white text-xs font-medium cursor-pointer"
                               >
                                 <Trash2 className="w-3 h-3" />
                                 Delete

@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS public.tasks (
   entry_date date,
   client_name text,
   phone_number text,
+  staff text,
   place text,
   district_id uuid REFERENCES public.districts(id) ON DELETE SET NULL,
   site_visit_payment text,

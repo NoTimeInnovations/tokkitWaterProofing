@@ -47,6 +47,7 @@ interface Task {
   district? : string;
   site_visit_payment?: string;
   notes?: string;
+  staff?: string;
   tags?: Tag[];
 }
 
@@ -193,12 +194,15 @@ export default function Home({
     }
 
     if(query.trim()){
-      fetchQuery = fetchQuery.or("client_name.ilike.%"+query+"%,place.ilike.%"+query+"%,phone_number.ilike.%"+query+"%");
+      fetchQuery = fetchQuery.or("client_name.ilike.%"+query+"%,place.ilike.%"+query+"%,phone_number.ilike.%"+query+"%,staff.ilike.%"+query+"%");
     }
 
     const { data, error } = await fetchQuery;
 
     if (error) throw error;
+
+    console.log("Fetched tasks:", data);
+
     setTasks(data || []);
   };
 
@@ -603,7 +607,7 @@ export default function Home({
                   {tag.name}
                   <button
                     onClick={() => toggleTag(tag.id)}
-                    className="ml-1 hover:opacity-70"
+                    className="ml-1 hover:opacity-70 cursor-pointer"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -624,7 +628,7 @@ export default function Home({
                         prev.filter((d) => d !== districtId)
                       )
                     }
-                    className="ml-1 hover:text-slate-600"
+                    className="ml-1 hover:text-slate-600 cursor-pointer"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -670,7 +674,7 @@ export default function Home({
               {task.status !== "completed" && task.status === "pending" && (
                 <button
                   onClick={() => markComplete(task.id)}
-                  className="absolute top-2 right-2 bg-green-600 hover:bg-green-700 text-white h-7 px-2 rounded text-xs flex items-center gap-1"
+                  className="absolute top-2 right-2 bg-green-600 hover:bg-green-700 text-white h-7 px-2 rounded text-xs flex items-center gap-1 cursor-pointer"
                   title="Mark as complete"
                 >
                   <Check className="w-3 h-3" />
@@ -750,7 +754,7 @@ export default function Home({
                 <div className="flex gap-2 mb-2">
                   <button
                     onClick={() => handleCall(task.phone_number)}
-                    className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-green-500 hover:bg-green-600 rounded-lg transition-colors text-white text-xs font-medium"
+                    className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-green-500 hover:bg-green-600 rounded-lg transition-colors text-white text-xs font-medium cursor-pointer"
                   >
                     <Phone className="w-3.5 h-3.5" />
                     Call
@@ -760,14 +764,14 @@ export default function Home({
                       setPanelMode("edit");
                       setEditTask(task as Task);
                     }}
-                    className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors text-white text-xs font-medium"
+                    className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors text-white text-xs font-medium cursor-pointer"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
                     Edit
                   </button>
                   <button
                     onClick={() => handleDelete(task.id)}
-                    className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-red-500 hover:bg-red-600 rounded-lg transition-colors text-white text-xs font-medium"
+                    className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-red-500 hover:bg-red-600 rounded-lg transition-colors text-white text-xs font-medium cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     Delete
@@ -807,6 +811,18 @@ export default function Home({
                         {task.phone_number}
                       </div>
                     </div>
+
+                    {/* Staff */}
+                    {task.staff && (
+                      <div>
+                        <div className="font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                          Staff
+                        </div>
+                        <div className="text-slate-600 dark:text-slate-400">
+                          {task.staff}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Payment Details */}
                     {task.site_visit_payment && (
@@ -862,7 +878,7 @@ export default function Home({
                       setExpandedTask(task.id);
                     }
                   }}
-                  className="w-full text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors mt-1"
+                  className="w-full text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors mt-1 cursor-pointer"
                 >
                   {expandedTask === task.id ? "Show Less" : "Show Details"}
                 </button>
@@ -925,6 +941,9 @@ export default function Home({
                   District
                 </th>
                 <th className="px-3 py-2 border-b border-slate-200 dark:border-slate-700">
+                  Staff
+                </th>
+                <th className="px-3 py-2 border-b border-slate-200 dark:border-slate-700">
                   Payment
                 </th>
                 <th className="px-3 py-2 border-b border-slate-200 dark:border-slate-700">
@@ -972,6 +991,9 @@ export default function Home({
                     {task.district}
                   </td>
                   <td className="px-3 py-2 border-b border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400">
+                    {task.staff || "-"}
+                  </td>
+                  <td className="px-3 py-2 border-b border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400">
                     {task.site_visit_payment || "-"}
                   </td>
                   <td className="px-3 py-2 border-b border-slate-200 dark:border-slate-700">
@@ -1008,7 +1030,7 @@ export default function Home({
                         task.status === "pending" && (
                           <button
                             onClick={() => markComplete(task.id)}
-                            className="flex items-center gap-1 px-2 py-1 bg-green-600 hover:bg-green-700 rounded text-white text-xs font-medium"
+                            className="flex items-center gap-1 px-2 py-1 bg-green-600 hover:bg-green-700 rounded text-white text-xs font-medium cursor-pointer"
                             title="Mark as complete"
                           >
                             <Check className="w-3 h-3" />
@@ -1017,7 +1039,7 @@ export default function Home({
                         )}
                       <button
                         onClick={() => handleCall(task.phone_number)}
-                        className="flex items-center gap-1 px-2 py-1 bg-green-500 hover:bg-green-600 rounded transition-colors text-white text-xs font-medium"
+                        className="flex items-center gap-1 px-2 py-1 bg-green-500 hover:bg-green-600 rounded transition-colors text-white text-xs font-medium cursor-pointer"
                       >
                         <Phone className="w-3 h-3" />
                         Call
@@ -1027,14 +1049,14 @@ export default function Home({
                           setPanelMode("edit");
                           setEditTask(task as Task);
                         }}
-                        className="flex items-center gap-1 px-2 py-1 bg-blue-500 hover:bg-blue-600 rounded transition-colors text-white text-xs font-medium"
+                        className="flex items-center gap-1 px-2 py-1 bg-blue-500 hover:bg-blue-600 rounded transition-colors text-white text-xs font-medium cursor-pointer"
                       >
                         <Edit2 className="w-3 h-3" />
                         Edit
                       </button>
                       <button
                         onClick={() => handleDelete(task.id)}
-                        className="flex items-center gap-1 px-2 py-1 bg-red-500 hover:bg-red-600 rounded transition-colors text-white text-xs font-medium"
+                        className="flex items-center gap-1 px-2 py-1 bg-red-500 hover:bg-red-600 rounded transition-colors text-white text-xs font-medium cursor-pointer"
                       >
                         <Trash2 className="w-3 h-3" />
                         Delete
