@@ -49,6 +49,7 @@ export default function AdminHome({
   const [callHistory, setCallHistory] = useState<CallHistoryItem[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editPhone, setEditPhone] = useState("");
   const [editNotes, setEditNotes] = useState("");
@@ -67,7 +68,11 @@ export default function AdminHome({
     fetchTasks();
   }, [showAllCalls]);
 
-  const fetchCallHistory = async () => {
+  const fetchCallHistory = async (isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true);
+    }
+
     let query = supabase
       .from("call_history")
       .select("*")
@@ -82,10 +87,12 @@ export default function AdminHome({
 
     if (error) {
       console.error("Error fetching call history:", error);
+      setRefreshing(false);
       return;
     }
 
     setCallHistory(data || []);
+    setRefreshing(false);
   };
 
   const fetchTasks = async () => {
@@ -349,12 +356,13 @@ export default function AdminHome({
         </div>
         <div className="flex items-center gap-2">
           <Button
-            onClick={fetchCallHistory}
-            className="h-8 px-3 text-xs bg-green-600 hover:bg-green-700 text-white"
+            onClick={() => fetchCallHistory(true)}
+            disabled={refreshing}
+            className="h-8 px-3 text-xs bg-green-600 hover:bg-green-700 text-white disabled:bg-green-400 disabled:cursor-not-allowed"
             title="Refresh call list"
           >
-            Refresh
-            <RefreshCw className="w-3 h-3" />
+            {refreshing ? "Refreshing..." : "Refresh"}
+            <RefreshCw className={`w-3 h-3 ml-1 ${refreshing ? "animate-spin" : ""}`} />
           </Button>
           {onNavigateToHome && (
             <Button
@@ -853,7 +861,7 @@ export default function AdminHome({
               type="submit"
               disabled={loading || !phoneNumber.trim()}
               className="h-9 px-3 bg-blue-600 hover:bg-blue-700 text-white disabled:bg-slate-300 dark:disabled:bg-slate-600"
-            >
+            >Save
               <Send className="w-4 h-4" />
             </Button>
           </div>
