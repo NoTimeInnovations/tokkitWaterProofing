@@ -163,7 +163,7 @@ export default function Home({
     const t = await supabase.from("tags").select("*").order("name");
     setTags(t.data || []);
     setIsLoadingTags(false);
-    fetchTasks();
+    // Don't call fetchTasks here - let the useEffect handle it after filters are set
   }
 
   const fetchTasks = async () => {
@@ -243,6 +243,13 @@ export default function Home({
   useEffect(() => {
     setPage(1);
   }, [query, selectedDistricts, selectedTags, statusFilter]);
+
+  // Sync sheet filters with main filters when main filters change
+  useEffect(() => {
+    setSheetStatusFilter(statusFilter);
+    setSheetSelectedTags(selectedTags);
+    setSheetSelectedDistricts(selectedDistricts);
+  }, [statusFilter, selectedTags, selectedDistricts]);
 
   const handleDelete = async (taskId: string) => {
     if (!confirm("Delete this task?")) return;
