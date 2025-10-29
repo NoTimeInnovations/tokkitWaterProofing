@@ -160,50 +160,60 @@ export default function Home({
   }
 
   const fetchTasks = async () => {
-    let fetchQuery = supabase.from("tasks_full_data").select(`
-      *,
-      districts(*),
-      task_tags(
-        tag_id
-      )
-    `);
+    setIsLoadingTasks(true);
+    try {
+      let fetchQuery = supabase.from("tasks_full_data").select(`
+        *,
+        districts(*),
+        task_tags(
+          tag_id
+        )
+      `, { count: 'exact' });
 
-    if (selectedDistricts.length > 0) {
-      fetchQuery = fetchQuery.in("district_id", selectedDistricts);
-    }
-
-    if (selectedTags.length > 0) {
-      const { data: taskTags, error: tagsError } = await supabase
-        .from("task_tags")
-        .select("task_id")
-        .in("tag_id", selectedTags);
-
-      if (tagsError) throw tagsError;
-
-      if (taskTags && taskTags.length > 0) {
-        const taskIds = [...new Set(taskTags.map((tt) => tt.task_id))];
-        fetchQuery = fetchQuery.in("id", taskIds);
-      } else {
-        setTasks([]);
-        return;
+      if (selectedDistricts.length > 0) {
+        fetchQuery = fetchQuery.in("district_id", selectedDistricts);
       }
+
+      if (selectedTags.length > 0) {
+        const { data: taskTags, error: tagsError } = await supabase
+          .from("task_tags")
+          .select("task_id")
+          .in("tag_id", selectedTags);
+
+        if (tagsError) throw tagsError;
+
+        if (taskTags && taskTags.length > 0) {
+          const taskIds = [...new Set(taskTags.map((tt) => tt.task_id))];
+          fetchQuery = fetchQuery.in("id", taskIds);
+        } else {
+          setTasks([]);
+          setTotalTasks(0);
+          setIsLoadingTasks(false);
+          return;
+        }
+      }
+
+      if (statusFilter !== "all") {
+        fetchQuery = fetchQuery.eq("status", statusFilter);
+      }
+
+      if(query.trim()){
+        fetchQuery = fetchQuery.or("client_name.ilike.%"+query+"%,place.ilike.%"+query+"%,phone_number.ilike.%"+query+"%,staff.ilike.%"+query+"%");
+      }
+
+      const { data, error, count } = await fetchQuery;
+
+      if (error) throw error;
+
+      console.log("Fetched tasks:", data);
+
+      setTasks(data || []);
+      setTotalTasks(count || 0);
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+    } finally {
+      setIsLoadingTasks(false);
     }
-
-    if (statusFilter !== "all") {
-      fetchQuery = fetchQuery.eq("status", statusFilter);
-    }
-
-    if(query.trim()){
-      fetchQuery = fetchQuery.or("client_name.ilike.%"+query+"%,place.ilike.%"+query+"%,phone_number.ilike.%"+query+"%,staff.ilike.%"+query+"%");
-    }
-
-    const { data, error } = await fetchQuery;
-
-    if (error) throw error;
-
-    console.log("Fetched tasks:", data);
-
-    setTasks(data || []);
   };
 
   useEffect(() => {

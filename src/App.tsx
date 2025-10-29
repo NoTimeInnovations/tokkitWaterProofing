@@ -75,12 +75,6 @@ function App() {
 
       switch (event) {
         case "SIGNED_IN":
-        case "TOKEN_REFRESHED":
-          if (currentSession && !isSessionExpired(currentSession)) {
-            setSession(currentSession);
-          }
-          break;
-
         case "SIGNED_OUT":
         case "USER_UPDATED":
           setSession(null);
