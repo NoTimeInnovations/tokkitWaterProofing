@@ -10,11 +10,11 @@ import {
   Phone,
   MapPin,
   Calendar,
-  DollarSign,
   FileText,
   LogOut,
   X,
   History,
+  IndianRupee,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -229,8 +229,6 @@ export default function Home({
       const { data, error, count } = await fetchQuery;
 
       if (error) throw error;
-
-      console.log("Fetched tasks:", data);
 
       setTasks(data || []);
       setTotalTasks(count || 0);
@@ -752,7 +750,7 @@ export default function Home({
                   </div>
                   {task.site_visit_payment && (
                     <div className="flex items-center gap-1">
-                      <DollarSign className="w-3 h-3" />
+                      <IndianRupee className="w-3 h-3" />
                       <span>{task.site_visit_payment}</span>
                     </div>
                   )}
@@ -872,7 +870,7 @@ export default function Home({
                           Site Visit Payment
                         </div>
                         <div className="flex items-center gap-1 text-slate-600 dark:text-slate-400">
-                          <DollarSign className="w-3 h-3" />
+                          <IndianRupee className="w-3 h-3" />
                           <span>{task.site_visit_payment}</span>
                         </div>
                       </div>
