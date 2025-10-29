@@ -44,17 +44,17 @@ interface Task {
   place: string;
   district_id: string;
   status?: string;
-  district? : string;
+  district?: string;
   site_visit_payment?: string;
   notes?: string;
   staff?: string;
   tags?: Tag[];
 }
 
-export default function Home({ 
+export default function Home({
   onNavigateToAdmin,
-  initialTaskId 
-}: { 
+  initialTaskId,
+}: {
   onNavigateToAdmin?: () => void;
   initialTaskId?: string | null;
 }) {
@@ -67,7 +67,7 @@ export default function Home({
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const [isLoadingTags, setIsLoadingTags] = useState(false);
   const [statusFilter, setStatusFilter] = useState<
-    "all" | "completed" | "not_completed"
+    "all" | "completed" | "pending"
   >("all");
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
@@ -79,7 +79,9 @@ export default function Home({
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [expandedTask, setExpandedTask] = useState<string | null>(null);
   const [showFilterSheet, setShowFilterSheet] = useState(false);
-  const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(null);
+  const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(
+    null
+  );
 
   // Filter states for the sheet
   const [sheetStatusFilter, setSheetStatusFilter] = useState(statusFilter);
@@ -115,7 +117,7 @@ export default function Home({
   useEffect(() => {
     if (initialTaskId) {
       // Find the task by ID and set it as expanded and highlighted
-      const task = tasks.find(t => t.id === initialTaskId);
+      const task = tasks.find((t) => t.id === initialTaskId);
       if (task) {
         setExpandedTask(initialTaskId);
         setHighlightedTaskId(initialTaskId);
@@ -123,7 +125,7 @@ export default function Home({
         setTimeout(() => {
           const element = document.getElementById(`task-${initialTaskId}`);
           if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            element.scrollIntoView({ behavior: "smooth", block: "center" });
           }
         }, 100);
       }
@@ -134,17 +136,22 @@ export default function Home({
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (highlightedTaskId) {
-        const highlightedElement = document.getElementById(`task-${highlightedTaskId}`);
-        if (highlightedElement && !highlightedElement.contains(event.target as Node)) {
+        const highlightedElement = document.getElementById(
+          `task-${highlightedTaskId}`
+        );
+        if (
+          highlightedElement &&
+          !highlightedElement.contains(event.target as Node)
+        ) {
           setHighlightedTaskId(null);
         }
       }
     };
 
     if (highlightedTaskId) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
       return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
+        document.removeEventListener("mousedown", handleClickOutside);
       };
     }
   }, [highlightedTaskId]);
@@ -162,13 +169,16 @@ export default function Home({
   const fetchTasks = async () => {
     setIsLoadingTasks(true);
     try {
-      let fetchQuery = supabase.from("tasks_full_data").select(`
+      let fetchQuery = supabase.from("tasks_full_data").select(
+        `
         *,
         districts(*),
         task_tags(
           tag_id
         )
-      `, { count: 'exact' });
+      `,
+        { count: "exact" }
+      );
 
       if (selectedDistricts.length > 0) {
         fetchQuery = fetchQuery.in("district_id", selectedDistricts);
@@ -193,12 +203,22 @@ export default function Home({
         }
       }
 
-      if (statusFilter !== "all") {
+      if (statusFilter && statusFilter !== "all") {
         fetchQuery = fetchQuery.eq("status", statusFilter);
       }
 
-      if(query.trim()){
-        fetchQuery = fetchQuery.or("client_name.ilike.%"+query+"%,place.ilike.%"+query+"%,phone_number.ilike.%"+query+"%,staff.ilike.%"+query+"%");
+      if (query.trim()) {
+        fetchQuery = fetchQuery.or(
+          "client_name.ilike.%" +
+            query +
+            "%,place.ilike.%" +
+            query +
+            "%,phone_number.ilike.%" +
+            query +
+            "%,staff.ilike.%" +
+            query +
+            "%"
+        );
       }
 
       const { data, error, count } = await fetchQuery;
@@ -308,8 +328,7 @@ export default function Home({
         page,
       };
       localStorage.setItem("tasks_filters_v1", JSON.stringify(payload));
-    } catch (e) {
-    }
+    } catch (e) {}
   }, [query, selectedDistricts, selectedTags, statusFilter, page]);
 
   if (panelMode !== "none") {
@@ -401,7 +420,7 @@ export default function Home({
                   {[
                     { value: "all", label: "All Statuses" },
                     { value: "completed", label: "Completed" },
-                    { value: "not_completed", label: "Not Completed" },
+                    { value: "pending", label: "Not Completed" },
                   ].map((option) => (
                     <label key={option.value} className="flex items-center">
                       <input
@@ -673,8 +692,8 @@ export default function Home({
               key={task.id}
               id={`task-${task.id}`}
               className={`relative bg-white dark:bg-slate-800 rounded-lg border ${
-                highlightedTaskId === task.id 
-                  ? "border-blue-500 shadow-lg ring-2 ring-blue-500/50" 
+                highlightedTaskId === task.id
+                  ? "border-blue-500 shadow-lg ring-2 ring-blue-500/50"
                   : "border-slate-200 dark:border-slate-700"
               } overflow-hidden ${
                 task.status === "completed" ? "opacity-60" : ""
