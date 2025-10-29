@@ -38,11 +38,23 @@ CREATE TABLE IF NOT EXISTS public.task_tags (
   PRIMARY KEY (task_id, tag_id)
 );
 
+-- Call History table for Admin Home
+CREATE TABLE IF NOT EXISTS public.call_history (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  phone_number text NOT NULL,
+  notes text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
 -- Indexes to speed up common queries and global search
 CREATE INDEX IF NOT EXISTS idx_tasks_client_name ON public.tasks (client_name);
 CREATE INDEX IF NOT EXISTS idx_tasks_phone_number ON public.tasks (phone_number);
 CREATE INDEX IF NOT EXISTS idx_tasks_place ON public.tasks (place);
 CREATE INDEX IF NOT EXISTS idx_tasks_district ON public.tasks (district_id);
+
+-- Indexes for call_history table
+CREATE INDEX IF NOT EXISTS idx_call_history_phone ON public.call_history (phone_number);
+CREATE INDEX IF NOT EXISTS idx_call_history_created_at ON public.call_history (created_at DESC);
 
 -- Full-text search index (searches client_name, place, phone_number)
 DO $$

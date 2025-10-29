@@ -14,6 +14,7 @@ import {
   FileText,
   LogOut,
   X,
+  History,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +38,7 @@ interface Tag {
 interface Task {
   id: string;
   created_at: string;
+  entry_date?: string;
   client_name: string;
   phone_number: string;
   place: string;
@@ -48,7 +50,13 @@ interface Task {
   tags?: Tag[];
 }
 
-export default function Home() {
+export default function Home({ 
+  onNavigateToAdmin,
+  initialTaskId 
+}: { 
+  onNavigateToAdmin?: () => void;
+  initialTaskId?: string | null;
+}) {
   const [query, setQuery] = useState("");
   const [districts, setDistricts] = useState<District[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
@@ -70,6 +78,7 @@ export default function Home() {
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [expandedTask, setExpandedTask] = useState<string | null>(null);
   const [showFilterSheet, setShowFilterSheet] = useState(false);
+  const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(null);
 
   // Filter states for the sheet
   const [sheetStatusFilter, setSheetStatusFilter] = useState(statusFilter);
@@ -100,6 +109,44 @@ export default function Home() {
     }
     fetchMeta();
   }, []);
+
+  // Handle initialTaskId from navigation
+  useEffect(() => {
+    if (initialTaskId) {
+      // Find the task by ID and set it as expanded and highlighted
+      const task = tasks.find(t => t.id === initialTaskId);
+      if (task) {
+        setExpandedTask(initialTaskId);
+        setHighlightedTaskId(initialTaskId);
+        // Optionally scroll to the task
+        setTimeout(() => {
+          const element = document.getElementById(`task-${initialTaskId}`);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 100);
+      }
+    }
+  }, [initialTaskId, tasks]);
+
+  // Handle click outside to unhighlight
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (highlightedTaskId) {
+        const highlightedElement = document.getElementById(`task-${highlightedTaskId}`);
+        if (highlightedElement && !highlightedElement.contains(event.target as Node)) {
+          setHighlightedTaskId(null);
+        }
+      }
+    };
+
+    if (highlightedTaskId) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [highlightedTaskId]);
 
   async function fetchMeta() {
     const d = await supabase.from("districts").select("id,name").order("name");
@@ -476,13 +523,21 @@ export default function Home() {
               )}
             </div>
           </Button>
+          {onNavigateToAdmin && (
+            <Button
+              onClick={onNavigateToAdmin}
+              className="h-8 px-3 text-xs bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <History className="w-3 h-3 mr-1" />
+              Call List
+            </Button>
+          )}
           <Button
             onClick={handleLogout}
             className="h-8 px-3 text-xs bg-red-600 hover:bg-red-700 text-white"
             variant="destructive"
           >
-            <LogOut className="w-3 h-3 mr-1" />
-            Logout
+            <LogOut className="w-3 h-3" />
           </Button>
         </div>
       </div>
@@ -602,7 +657,12 @@ export default function Home() {
           tasks.map((task) => (
             <div
               key={task.id}
-              className={`relative bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden ${
+              id={`task-${task.id}`}
+              className={`relative bg-white dark:bg-slate-800 rounded-lg border ${
+                highlightedTaskId === task.id 
+                  ? "border-blue-500 shadow-lg ring-2 ring-blue-500/50" 
+                  : "border-slate-200 dark:border-slate-700"
+              } overflow-hidden ${
                 task.status === "completed" ? "opacity-60" : ""
               }`}
             >
@@ -638,7 +698,9 @@ export default function Home() {
                   <div className="flex items-center gap-1">
                     <Calendar className="w-3 h-3" />
                     <span>
-                      {task.created_at
+                      {task.entry_date
+                        ? new Date(task.entry_date).toLocaleDateString()
+                        : task.created_at
                         ? new Date(task.created_at).toLocaleDateString()
                         : ""}
                     </span>
@@ -772,14 +834,16 @@ export default function Home() {
                       </div>
                     )}
 
-                    {/* Created Date */}
+                    {/* Entry Date */}
                     <div>
                       <div className="font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                        Created
+                        Entry Date
                       </div>
                       <div className="text-slate-600 dark:text-slate-400">
-                        {task.created_at
-                          ? new Date(task.created_at).toLocaleString()
+                        {task.entry_date
+                          ? new Date(task.entry_date).toLocaleDateString()
+                          : task.created_at
+                          ? new Date(task.created_at).toLocaleDateString()
                           : ""}
                       </div>
                     </div>
@@ -788,9 +852,16 @@ export default function Home() {
 
                 {/* Toggle Details */}
                 <button
-                  onClick={() =>
-                    setExpandedTask(expandedTask === task.id ? null : task.id)
-                  }
+                  onClick={() => {
+                    if (expandedTask === task.id) {
+                      // Collapsing - clear highlight
+                      setExpandedTask(null);
+                      setHighlightedTaskId(null);
+                    } else {
+                      // Expanding
+                      setExpandedTask(task.id);
+                    }
+                  }}
                   className="w-full text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors mt-1"
                 >
                   {expandedTask === task.id ? "Show Less" : "Show Details"}
@@ -868,16 +939,23 @@ export default function Home() {
               {tasks.map((task) => (
                 <tr
                   key={task.id}
+                  id={`task-${task.id}`}
                   className={`${
                     task.status === "completed" ? "opacity-60" : ""
-                  } hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors`}
+                  } ${
+                    highlightedTaskId === task.id
+                      ? "bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-500/50"
+                      : "hover:bg-slate-50 dark:hover:bg-slate-700/30"
+                  } transition-colors`}
                 >
                   <td className="px-3 py-2 border-b border-slate-200 dark:border-slate-700">
                     <div className="font-medium text-slate-900 dark:text-white">
                       {task.client_name}
                     </div>
                     <div className="text-xs text-slate-500 dark:text-slate-400">
-                      {task.created_at
+                      {task.entry_date
+                        ? new Date(task.entry_date).toLocaleDateString()
+                        : task.created_at
                         ? new Date(task.created_at).toLocaleDateString()
                         : ""}
                     </div>

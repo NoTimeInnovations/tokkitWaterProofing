@@ -18,17 +18,22 @@ export default function TaskForm({
   onSaved,
   onCancel,
   task,
+  prefilledData,
 }: {
   onSaved?: () => void;
   onCancel?: () => void;
   task?: any;
+  prefilledData?: { phone: string; notes: string } | null;
 }) {
   const [clientName, setClientName] = useState(task?.client_name || "");
-  const [phone, setPhone] = useState(task?.phone_number || "");
+  const [phone, setPhone] = useState(task?.phone_number || prefilledData?.phone || "");
   const [place, setPlace] = useState(task?.place || "");
   const [siteVisitPayment, setSiteVisitPayment] = useState(task?.site_visit_payment || "");
-  const [notes, setNotes] = useState(task?.notes || "");
+  const [notes, setNotes] = useState(task?.notes || prefilledData?.notes || "");
   const [status, setStatus] = useState<string>(task?.status || "pending");
+  const [entryDate, setEntryDate] = useState<string>(
+    task?.entry_date || new Date().toISOString().split('T')[0]
+  );
   const [districts, setDistricts] = useState<any[]>([]);
   const [districtId, setDistrictId] = useState<string | null>(
     task?.district_id || null
@@ -52,19 +57,31 @@ export default function TaskForm({
       setSiteVisitPayment(task.site_visit_payment || "");
       setNotes(task.notes || "");
       setStatus(task.status || "pending");
+      setEntryDate(task.entry_date || new Date().toISOString().split('T')[0]);
+    } else if (prefilledData) {
+      // Use prefilled data when creating new task from call history
+      setPhone(prefilledData.phone || "");
+      setNotes(prefilledData.notes || "");
+      setEntryDate(new Date().toISOString().split('T')[0]);
+      // Set default tag to "pending" for new tasks
+      const pendingTag = tags.find(t => t.name.toLowerCase() === "pending");
+      if (pendingTag) {
+        setSelectedTags([pendingTag.id]);
+      }
     } else {
       // reset when no task
       setClientName("");
       setPhone("");
       setPlace("");
       setDistrictId(null);
+      setEntryDate(new Date().toISOString().split('T')[0]);
       // Set default tag to "pending" for new tasks
       const pendingTag = tags.find(t => t.name.toLowerCase() === "pending");
       if (pendingTag) {
         setSelectedTags([pendingTag.id]);
       }
     }
-  }, [task, tags]);
+  }, [task, tags, prefilledData]);
 
   async function fetchMeta() {
     const d = await supabase.from("districts").select("id,name").order("name");
@@ -101,6 +118,7 @@ export default function TaskForm({
             site_visit_payment: siteVisitPayment,
             notes,
             status,
+            entry_date: entryDate,
           })
           .eq("id", task.id);
 
@@ -143,6 +161,7 @@ export default function TaskForm({
             site_visit_payment: siteVisitPayment,
             notes,
             status,
+            entry_date: entryDate,
           })
           .select("id")
           .maybeSingle();
@@ -276,6 +295,20 @@ export default function TaskForm({
             </Select>
           </div>
         </div>
+      </div>
+
+      {/* Entry Date */}
+      <div className="space-y-2">
+        <Label htmlFor="entryDate" className="text-sm font-medium">
+          Entry Date
+        </Label>
+        <Input
+          id="entryDate"
+          type="date"
+          value={entryDate}
+          onChange={(e) => setEntryDate(e.target.value)}
+          className="h-10"
+        />
       </div>
 
       {/* Payment and Notes */}

@@ -107,3 +107,33 @@ SELECT column_name FROM information_schema.columns
  WHERE table_schema = 'auth' AND table_name = 'users' ORDER BY ordinal_position;
 ```
 
+## New Features
+
+### Call History Table (call_history)
+
+Added in the latest update to support the Admin Home page with WhatsApp-style phone number tracking.
+
+**Table Structure:**
+- `id` (uuid, PK) - Auto-generated unique identifier
+- `phone_number` (text, NOT NULL) - Phone number submitted by admin
+- `notes` (text, nullable) - Optional notes for the call
+- `created_at` (timestamptz) - Timestamp, defaults to now()
+
+**Indexes:**
+- `idx_call_history_phone` - Fast phone number lookups
+- `idx_call_history_created_at` - Date-based sorting (DESC)
+
+**Features:**
+- WhatsApp-style input interface in AdminHome
+- Automatic date grouping (Today, Yesterday, specific dates)
+- Links to existing tasks when phone number matches
+- Full CRUD operations (Create, Read, Update, Delete)
+- Action buttons: Call, Edit, Delete, View Task (if applicable)
+
+**Usage:**
+The call_history table is automatically created when you run `schema.sql`. No additional seed data needed.
+
+To manually create just this table:
+```powershell
+psql "<CONN_STRING>" -f supabase/call_history_table.sql
+```
