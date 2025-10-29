@@ -46,11 +46,11 @@ function AuthProvider() {
           // Only navigate if on login page or root without params
           if (currentPath === "/login") {
             // Navigate based on user role after login
-            if (session.user?.user_metadata?.role === "admin") {
-              navigate("/call-history", { replace: true });
-            } else {
+            // if (session.user?.user_metadata?.role === "admin") {
+            //   navigate("/call-history", { replace: true });
+            // } else {
               navigate("/", { replace: true });
-            }
+            // }
           }
           // If already on a valid path, stay there
         } else {
@@ -63,11 +63,11 @@ function AuthProvider() {
             if (refreshedSession && !isSessionExpired(refreshedSession)) {
               setSession(refreshedSession);
               if (currentPath === "/login") {
-                if (refreshedSession.user?.user_metadata?.role === "admin") {
-                  navigate("/call-history", { replace: true });
-                } else {
+                // if (refreshedSession.user?.user_metadata?.role === "admin") {
+                //   navigate("/call-history", { replace: true });
+                // } else {
                   navigate("/", { replace: true });
-                }
+                // }
               }
             }
           }
@@ -96,11 +96,11 @@ function AuthProvider() {
           if (currentSession) {
             setSession(currentSession);
             // Navigate based on user role after sign in
-            if (currentSession.user?.user_metadata?.role === "admin") {
-              navigate("/call-history", { replace: true });
-            } else {
+            // if (currentSession.user?.user_metadata?.role === "admin") {
+            //   navigate("/call-history", { replace: true });
+            // } else {
               navigate("/", { replace: true });
-            }
+            // }
           }
           break;
 
