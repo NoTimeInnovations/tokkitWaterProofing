@@ -353,6 +353,7 @@ export default function AdminHome({
             className="h-8 px-3 text-xs bg-green-600 hover:bg-green-700 text-white"
             title="Refresh call list"
           >
+            Refresh
             <RefreshCw className="w-3 h-3" />
           </Button>
           {onNavigateToHome && (
@@ -385,13 +386,13 @@ export default function AdminHome({
           <Button
             onClick={() => setShowAllCalls(!showAllCalls)}
             className={`h-9 px-3 text-xs ${
-              showAllCalls
+              !showAllCalls
                 ? "bg-blue-600 hover:bg-blue-700 text-white"
                 : "bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200"
             }`}
           >
             <Filter className="w-4 h-4 mr-1" />
-            {showAllCalls ? "All Calls" : "Without Task"}
+            {!showAllCalls ? "All Calls" : "New Calls"}
           </Button>
         </div>
       </div>
