@@ -14,6 +14,7 @@ import {
   ArrowLeft,
   Plus,
   Search,
+  Filter,
 } from "lucide-react";
 import TaskForm from "@/components/TaskForm";
 
@@ -21,6 +22,7 @@ interface CallHistoryItem {
   id: string;
   phone_number: string;
   notes: string | null;
+  task_id: string | null;
   created_at: string;
 }
 
@@ -57,17 +59,25 @@ export default function AdminHome({
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
+  const [showAllCalls, setShowAllCalls] = useState(false);
 
   useEffect(() => {
     fetchCallHistory();
     fetchTasks();
-  }, []);
+  }, [showAllCalls]);
 
   const fetchCallHistory = async () => {
-    const { data, error } = await supabase
+    let query = supabase
       .from("call_history")
       .select("*")
       .order("created_at", { ascending: false });
+
+    // Filter to show only calls without tasks by default
+    if (!showAllCalls) {
+      query = query.is("task_id", null);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("Error fetching call history:", error);
@@ -95,6 +105,37 @@ export default function AdminHome({
     if (!phoneNumber.trim()) return;
 
     setLoading(true);
+    
+    // Check if phone number already exists in call history
+    const { data: existingCall } = await supabase
+      .from("call_history")
+      .select("id")
+      .eq("phone_number", phoneNumber.trim())
+      .single();
+
+    if (existingCall) {
+      // Check if there's a task with this phone number
+      const { data: existingTask } = await supabase
+        .from("tasks_full_data")
+        .select("id, client_name")
+        .eq("phone_number", phoneNumber.trim())
+        .limit(1)
+        .single();
+
+      if (existingTask) {
+        const viewTask = confirm(
+          `This phone number is already in the call history for "${existingTask.client_name}".\n\nDo you want to view the task?`
+        );
+        if (viewTask && onViewTask) {
+          onViewTask(existingTask.id);
+        }
+      } else {
+        alert("This phone number is already in the call history");
+      }
+      setLoading(false);
+      return;
+    }
+
     const { error } = await supabase.from("call_history").insert({
       phone_number: phoneNumber.trim(),
       notes: notes.trim() || null,
@@ -102,7 +143,28 @@ export default function AdminHome({
 
     if (error) {
       console.error("Error adding call history:", error);
-      alert("Failed to add phone number");
+      if (error.code === "23505") {
+        // Unique violation error code - check for task
+        const { data: existingTask } = await supabase
+          .from("tasks_full_data")
+          .select("id, client_name")
+          .eq("phone_number", phoneNumber.trim())
+          .limit(1)
+          .single();
+
+        if (existingTask) {
+          const viewTask = confirm(
+            `This phone number is already in the call history for "${existingTask.client_name}".\n\nDo you want to view the task?`
+          );
+          if (viewTask && onViewTask) {
+            onViewTask(existingTask.id);
+          }
+        } else {
+          alert("This phone number is already in the call history");
+        }
+      } else {
+        alert("Failed to add phone number");
+      }
     } else {
       setPhoneNumber("");
       setNotes("");
@@ -312,6 +374,17 @@ export default function AdminHome({
               }}
             />
           </div>
+          <Button
+            onClick={() => setShowAllCalls(!showAllCalls)}
+            className={`h-9 px-3 text-xs ${
+              showAllCalls
+                ? "bg-blue-600 hover:bg-blue-700 text-white"
+                : "bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200"
+            }`}
+          >
+            <Filter className="w-4 h-4 mr-1" />
+            {showAllCalls ? "All Calls" : "Without Task"}
+          </Button>
         </div>
       </div>
 
@@ -321,7 +394,7 @@ export default function AdminHome({
           <div className="bg-white dark:bg-slate-800 rounded-lg p-6 text-center border border-slate-200 dark:border-slate-700">
             <Phone className="w-8 h-8 mx-auto mb-2 text-slate-400" />
             <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">
-              No call history yet
+               Empty call list
             </h3>
             <p className="text-xs text-slate-600 dark:text-slate-400">
               Add phone numbers below to get started
@@ -562,7 +635,7 @@ export default function AdminHome({
                   <td colSpan={5} className="px-3 py-8 text-center border-b border-slate-200 dark:border-slate-700">
                     <Phone className="w-8 h-8 mx-auto mb-2 text-slate-400" />
                     <p className="text-sm text-slate-600 dark:text-slate-400">
-                      No call history yet
+                      Empty call list
                     </p>
                     <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">
                       Add phone numbers below to get started

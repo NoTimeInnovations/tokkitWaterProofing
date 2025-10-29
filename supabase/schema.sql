@@ -42,8 +42,9 @@ CREATE TABLE IF NOT EXISTS public.task_tags (
 -- Call History table for Admin Home
 CREATE TABLE IF NOT EXISTS public.call_history (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  phone_number text NOT NULL,
+  phone_number text NOT NULL UNIQUE,
   notes text,
+  task_id uuid REFERENCES public.tasks(id) ON DELETE SET NULL,
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
@@ -56,6 +57,7 @@ CREATE INDEX IF NOT EXISTS idx_tasks_district ON public.tasks (district_id);
 -- Indexes for call_history table
 CREATE INDEX IF NOT EXISTS idx_call_history_phone ON public.call_history (phone_number);
 CREATE INDEX IF NOT EXISTS idx_call_history_created_at ON public.call_history (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_call_history_task_id ON public.call_history (task_id);
 
 -- Full-text search index (searches client_name, place, phone_number)
 DO $$

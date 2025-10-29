@@ -221,6 +221,11 @@ export default function Home({
         );
       }
 
+      // Order by entry_date (newest first), fallback to created_at
+      fetchQuery = fetchQuery
+        .order("entry_date", { ascending: false, nullsFirst: false })
+        .order("created_at", { ascending: false });
+
       const { data, error, count } = await fetchQuery;
 
       if (error) throw error;

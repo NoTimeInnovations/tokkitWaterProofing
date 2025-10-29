@@ -186,6 +186,31 @@ export default function TaskForm({
           selectedTags
         );
 
+        // Handle call_history integration
+        if (taskId && phone) {
+          // Check if phone number exists in call_history
+          const { data: existingCall } = await supabase
+            .from("call_history")
+            .select("id")
+            .eq("phone_number", phone)
+            .single();
+
+          if (existingCall) {
+            // Update existing call_history with task_id
+            await supabase
+              .from("call_history")
+              .update({ task_id: taskId })
+              .eq("id", existingCall.id);
+          } else {
+            // Add to call_history with task_id
+            await supabase.from("call_history").insert({
+              phone_number: phone,
+              notes: notes || null,
+              task_id: taskId,
+            });
+          }
+        }
+
         if (taskId && selectedTags.length) {
           const rows = selectedTags.map((tagId) => ({
             task_id: taskId,
