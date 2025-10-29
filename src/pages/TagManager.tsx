@@ -32,7 +32,6 @@ export default function TagManager({ onChanged, onClose }: { onChanged?: ()=>voi
       setName('')
       setColor('#3b82f6') // Reset to default blue
       fetchTags()
-      if (onChanged) onChanged()
     }catch(err){console.error(err)}
   }
 
@@ -40,7 +39,6 @@ export default function TagManager({ onChanged, onClose }: { onChanged?: ()=>voi
     if(!confirm('Are you sure you want to delete this tag? This action cannot be undone.')) return
     await supabase.from('tags').delete().eq('id', id)
     fetchTags()
-    if (onChanged) onChanged()
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -109,7 +107,10 @@ export default function TagManager({ onChanged, onClose }: { onChanged?: ()=>voi
               <Plus className="h-4 w-4" />
               Add Tag
             </Button>
-            <Button variant="outline" onClick={onClose}>
+            <Button variant="outline" onClick={() => {
+              if (onChanged) onChanged()
+              if (onClose) onClose()
+            }}>
               Close
             </Button>
           </div>
