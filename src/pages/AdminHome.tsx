@@ -15,6 +15,7 @@ import {
   Plus,
   Search,
   Filter,
+  RefreshCw,
 } from "lucide-react";
 import TaskForm from "@/components/TaskForm";
 
@@ -347,6 +348,13 @@ export default function AdminHome({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            onClick={fetchCallHistory}
+            className="h-8 px-3 text-xs bg-green-600 hover:bg-green-700 text-white"
+            title="Refresh call list"
+          >
+            <RefreshCw className="w-3 h-3" />
+          </Button>
           {onNavigateToHome && (
             <Button
               onClick={onNavigateToHome}
