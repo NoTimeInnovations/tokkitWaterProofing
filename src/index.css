@@ -118,3 +118,8 @@
     @apply bg-background text-foreground;
   }
 }
+
+
+td{
+  font-size: 12px;
+}

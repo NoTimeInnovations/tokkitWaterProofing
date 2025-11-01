@@ -7,12 +7,12 @@ import {
   useNavigate,
   useSearchParams,
 } from "react-router-dom";
-import Login from "./pages/Login"; 
-import Home from "./pages/Home"; 
-import { supabase } from "./lib/supabase"; 
-import type { Session } from "@supabase/supabase-js"; 
-import AdminHome from "./pages/AdminHome"; 
-
+import Login from "./pages/Login";
+import Home from "./pages/Home";
+import { supabase } from "./lib/supabase";
+import type { Session } from "@supabase/supabase-js";
+import AdminHome from "./pages/AdminHome";
+import TestPage from "./pages/TestPage";
 
 function App() {
   return (
@@ -30,41 +30,46 @@ function AuthProvider() {
 
   useEffect(() => {
     let mounted = true;
-    setLoading(true);
+    setLoading(false);
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event: string, session: Session | null) => {
-      if (!mounted) return;
+    } = supabase.auth.onAuthStateChange(
+      (event: string, session: Session | null) => {
+        if (!mounted) return;
 
-      console.log("Auth state change:", event, session);
+        console.log("Auth state change:", event, session);
 
-      setSession(session);
+        setSession(session);
 
-      if (event === "INITIAL_SESSION") {
-        if (session) {
-          if (window.location.pathname === "/login") {
-            navigate("/", { replace: true });
-          }
+        // if (event === "INITIAL_SESSION") {
+        //   if (session) {
+        //     if (window.location.pathname === "/login") {
+        //       navigate("/", { replace: true });
+        //     }
+        //   }
+        //   setLoading(false);
+        // }
+
+        if (event === "SIGNED_IN") {
+          // navigate("/", { replace: true });
+          setLoading(false);
         }
-        setLoading(false);
-      }
 
-      if (event === "SIGNED_IN") {
-        navigate("/", { replace: true });
-        setLoading(false);
-      }
+        if (event === "SIGNED_OUT") {
+          navigate("/login", { replace: true });
+          setLoading(false);
+        }
 
-      if (event === "SIGNED_OUT") {
-        navigate("/login", { replace: true });
-        setLoading(false);
+        if (
+          event !== "INITIAL_SESSION" &&
+          event !== "SIGNED_IN" &&
+          event !== "SIGNED_OUT"
+        ) {
+          setLoading(false);
+        }
       }
-      
-
-      if (event !== "INITIAL_SESSION" && event !== "SIGNED_IN" && event !== "SIGNED_OUT") {
-         setLoading(false);
-      }
-    });
+    );
 
     return () => {
       mounted = false;
@@ -85,6 +90,7 @@ function AuthProvider() {
 
   return (
     <Routes>
+      <Route path="/test" element={<TestPage />} />
       <Route
         path="/login"
         element={
@@ -135,10 +141,8 @@ function AuthProvider() {
           )
         }
       />
-      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
 
 export default App;
-
