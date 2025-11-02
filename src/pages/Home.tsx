@@ -226,6 +226,7 @@ export default function Home({
         .order("entry_date", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false });
 
+        //fixed pagination
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
 

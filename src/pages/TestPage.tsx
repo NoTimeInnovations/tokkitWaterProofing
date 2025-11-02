@@ -49,7 +49,7 @@ type DuplicateRowData = {
   phoneNumber: string;
 };
 
-const workStartedTagId = "c890009e-8ef5-463b-8643-1a12ab83c34d";
+const workStartedTagId = "2e60f6a0-1bfe-4820-ab6d-544b735115bb";
 const cancelledTagId = "7ed72c57-9297-4d5f-aefa-ed9edc2d6b27";
 const siteVisitedTagId = "31a4f755-22c8-447e-937b-a0f918a1cc99";
 const workProgressTagId = "b669453c-2344-4a7b-8c0e-4d8c3aa8d226";
@@ -367,7 +367,7 @@ const TestPage = () => {
       .map((row) => ({
         id: crypto.randomUUID(),
         client_name: row["NAME "],
-        phone_number: row["PH NO"],
+        phone_number: `${row["PH NO"]}`,
         place: row["PLACE"],
         district_id:
           Object.keys(districts).find(
