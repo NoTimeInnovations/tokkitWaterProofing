@@ -15,6 +15,7 @@ import {
   X,
   History,
   IndianRupee,
+  Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +23,7 @@ import { supabase, signOut } from "../lib/supabase";
 import { getContrastColor } from "../lib/utils";
 import TagManager from "./TagManager";
 import TaskForm from "@/components/TaskForm";
+import { useNavigate } from "react-router-dom";
 
 // Type definitions
 interface District {
@@ -52,7 +54,6 @@ interface Task {
 }
 
 export default function Home({
-  onNavigateToAdmin,
   initialTaskId,
 }: {
   onNavigateToAdmin?: () => void;
@@ -66,6 +67,7 @@ export default function Home({
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const [isLoadingTags, setIsLoadingTags] = useState(false);
+  const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState<
     "all" | "completed" | "pending"
   >("all");
@@ -226,7 +228,7 @@ export default function Home({
         .order("entry_date", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false });
 
-        //fixed pagination
+      //fixed pagination
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
 
@@ -237,7 +239,12 @@ export default function Home({
       setTasks(data || []);
       setTotalTasks(count || 0);
     } catch (error) {
-      console.error("Error fetching tasks:", error);
+      console.error("Error fetching tasks",error);
+
+      if (error && (error as Error).message.includes("JWT")) {
+        console.log("Redirecting to login....");
+        await signOut();
+      }
     } finally {
       setIsLoadingTasks(false);
     }
@@ -269,10 +276,13 @@ export default function Home({
       // Remove all tags associated with this task
       await supabase.from("task_tags").delete().eq("task_id", taskId);
 
-      // Mark task as completed
+      // Mark task as completed and set work start date
       await supabase
         .from("tasks")
-        .update({ status: "completed" })
+        .update({ 
+          status: "completed",
+          work_start_date: new Date().toISOString().split('T')[0]
+        })
         .eq("id", taskId);
 
       // optimistic UI: refresh list
@@ -559,7 +569,7 @@ export default function Home({
             <Plus className="w-3 h-3 mr-1" />
             Add
           </Button>
-          <Button
+          {/* <Button
             onClick={() => {
               setPanelMode("tags");
               setEditTask(null);
@@ -574,23 +584,30 @@ export default function Home({
                 <span className="ml-2 text-xs text-slate-500">Loading...</span>
               )}
             </div>
-          </Button>
-          {onNavigateToAdmin && (
+          </Button> */}
             <Button
-              onClick={onNavigateToAdmin}
+              onClick={() => {
+                navigate("/call-history");
+              }}
               className="h-8 px-3 text-xs bg-blue-600 hover:bg-blue-700 text-white"
             >
               <History className="w-3 h-3 mr-1" />
               Call List
             </Button>
-          )}
-          <Button
+          {
+            <Button onClick={() => {
+              navigate("/settings");
+            }}>
+              <Settings className="w-3 h-3" />
+            </Button>
+          }
+          {/* <Button
             onClick={handleLogout}
             className="h-8 px-3 text-xs bg-red-600 hover:bg-red-700 text-white"
             variant="destructive"
           >
             <LogOut className="w-3 h-3" />
-          </Button>
+          </Button> */}
         </div>
       </div>
 

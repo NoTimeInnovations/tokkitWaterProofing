@@ -13,6 +13,7 @@ import { supabase } from "./lib/supabase";
 import type { Session } from "@supabase/supabase-js";
 import AdminHome from "./pages/AdminHome";
 import TestPage from "./pages/TestPage";
+import Settings from "./pages/Settings";
 
 function App() {
   return (
@@ -125,13 +126,26 @@ function AuthProvider() {
         }
       />
       <Route
+        path="/settings"
+        element={
+          session ? (
+            <div className="min-h-screen bg-gray-100">
+              <main>
+                <Settings />
+              </main>
+            </div>
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        }
+      />
+      <Route
         path="/"
         element={
           session ? (
             <div className="min-h-screen bg-gray-100">
               <main>
                 <Home
-                  onNavigateToAdmin={() => navigate("/call-history")}
                   initialTaskId={searchParams.get("taskId") || undefined}
                 />
               </main>

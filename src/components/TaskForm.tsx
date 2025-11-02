@@ -29,6 +29,8 @@ export default function TaskForm({
   const [phone, setPhone] = useState(task?.phone_number || prefilledData?.phone || "");
   const [place, setPlace] = useState(task?.place || "");
   const [siteVisitPayment, setSiteVisitPayment] = useState(task?.site_visit_payment || "");
+  const [siteVisitDate, setSiteVisitDate] = useState<string>(task?.site_visit_date || "");
+  const [workStartDate, setWorkStartDate] = useState<string>(task?.work_start_date || "");
   const [notes, setNotes] = useState(task?.notes || prefilledData?.notes || "");
   const [status, setStatus] = useState<string>(task?.status || "pending");
   const [staff, setStaff] = useState(task?.staff || "");
@@ -56,6 +58,8 @@ export default function TaskForm({
       setDistrictId(task.district_id || null);
       setSelectedTags((task.tags || []).map((t: any) => t.id));
       setSiteVisitPayment(task.site_visit_payment || "");
+      setSiteVisitDate(task.site_visit_date || "");
+      setWorkStartDate(task.work_start_date || "");
       setNotes(task.notes || "");
       setStatus(task.status || "pending");
       setStaff(task.staff || "");
@@ -66,6 +70,8 @@ export default function TaskForm({
       setNotes(prefilledData.notes || "");
       setStaff("");
       setEntryDate(new Date().toISOString().split('T')[0]);
+      setSiteVisitDate("");
+      setWorkStartDate("");
       // Set default tag to "pending" for new tasks
       const pendingTag = tags.find(t => t.name.toLowerCase() === "pending");
       if (pendingTag) {
@@ -79,6 +85,8 @@ export default function TaskForm({
       setDistrictId(null);
       setStaff("");
       setEntryDate(new Date().toISOString().split('T')[0]);
+      setSiteVisitDate("");
+      setWorkStartDate("");
       // Set default tag to "pending" for new tasks
       const pendingTag = tags.find(t => t.name.toLowerCase() === "pending");
       if (pendingTag) {
@@ -120,6 +128,8 @@ export default function TaskForm({
             place,
             district_id: districtId,
             site_visit_payment: siteVisitPayment,
+            site_visit_date: siteVisitDate || null,
+            work_start_date: workStartDate || null,
             notes,
             status,
             staff,
@@ -164,6 +174,8 @@ export default function TaskForm({
             place,
             district_id: districtId,
             site_visit_payment: siteVisitPayment,
+            site_visit_date: siteVisitDate || null,
+            work_start_date: workStartDate || null,
             notes,
             status,
             staff,
@@ -360,8 +372,21 @@ export default function TaskForm({
         />
       </div>
 
-      {/* Payment and Notes */}
-      <div className="grid grid-cols-1 gap-4">
+      {/* Site Visit Date and Payment */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="siteVisitDate" className="text-sm font-medium">
+            Site Visit Date
+          </Label>
+          <Input
+            id="siteVisitDate"
+            type="date"
+            value={siteVisitDate}
+            onChange={(e) => setSiteVisitDate(e.target.value)}
+            className="h-10"
+          />
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="siteVisitPayment" className="text-sm font-medium">
             Site Visit Payment
@@ -374,7 +399,26 @@ export default function TaskForm({
             className="h-10"
           />
         </div>
+      </div>
 
+      {/* Work Start Date - Only show when status is completed */}
+      {status === 'completed' && (
+        <div className="space-y-2">
+          <Label htmlFor="workStartDate" className="text-sm font-medium">
+            Work Start Date
+          </Label>
+          <Input
+            id="workStartDate"
+            type="date"
+            value={workStartDate}
+            onChange={(e) => setWorkStartDate(e.target.value)}
+            className="h-10"
+          />
+        </div>
+      )}
+
+      {/* Notes and Status */}
+      <div className="grid grid-cols-1 gap-4">
         <div className="space-y-2">
           <Label htmlFor="notes" className="text-sm font-medium">
             Notes
@@ -393,7 +437,14 @@ export default function TaskForm({
             id="statusCompleted"
             type="checkbox"
             checked={status === 'completed'}
-            onChange={(e) => setStatus(e.target.checked ? 'completed' : 'pending')}
+            onChange={(e) => {
+              const isCompleted = e.target.checked;
+              setStatus(isCompleted ? 'completed' : 'pending');
+              // Auto-set work start date to today when marking as completed
+              if (isCompleted && !workStartDate) {
+                setWorkStartDate(new Date().toISOString().split('T')[0]);
+              }
+            }}
             className="h-4 w-4"
           />
           <Label htmlFor="statusCompleted" className="text-sm">
