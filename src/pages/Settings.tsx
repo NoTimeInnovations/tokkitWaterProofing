@@ -30,25 +30,41 @@ const Settings = () => {
     setExportMessage(null)
     
     try {
-      // Fetch all tasks with related data
-      const { data: tasks, error } = await supabase
-        .from('tasks_full_data')
-        .select(`
-          *,
-          districts(*),
-          task_tags(
-            tag_id,
-            tags(name, color)
-          )
-        `)
-        .order('entry_date', { ascending: false })
-        .order('created_at', { ascending: false })
-        .limit(10) // Limit to 10,000 records for performance
+      // Fetch all tasks with pagination to bypass 1000 row limit
+      let allTasks: any[] = []
+      let from = 0
+      const pageSize = 1000
+      let hasMore = true
 
-      if (error) throw error
+      while (hasMore) {
+        const { data: tasks, error, count } = await supabase
+          .from('tasks_full_data')
+          .select(`
+            *,
+            districts(*),
+            task_tags(
+              tag_id,
+              tags(name, color)
+            )
+          `, { count: 'exact' })
+          .order('created_at', { ascending: false })
+          .range(from, from + pageSize - 1)
+
+        if (error) throw error
+
+        if (tasks && tasks.length > 0) {
+          allTasks = [...allTasks, ...tasks]
+          from += pageSize
+          
+          // Check if there are more rows
+          hasMore = count ? from < count : tasks.length === pageSize
+        } else {
+          hasMore = false
+        }
+      }
 
       // Format data for export with specific column structure
-      const exportData = tasks?.map((task, index) => ({
+      const exportData = allTasks.map((task, index) => ({
         'NO': index + 1,
         'ENTER DATE': task.entry_date || "",
         'STAFF NAME': task.staff || '',
@@ -61,7 +77,7 @@ const Settings = () => {
         'SITE VISIT  PAYMENT': task.site_visit_payment || '',
         'WORK STATUS': task.status || '',
         'WORK START DATE': task.work_start_date || '',
-      })) || []
+      }))
 
       // Create workbook and worksheet
       const wb = XLSX.utils.book_new()
