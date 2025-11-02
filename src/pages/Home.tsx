@@ -226,7 +226,10 @@ export default function Home({
         .order("entry_date", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false });
 
-      const { data, error, count } = await fetchQuery;
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await fetchQuery.range(from, to);
 
       if (error) throw error;
 
@@ -263,17 +266,14 @@ export default function Home({
   const markComplete = async (taskId: string) => {
     try {
       // Remove all tags associated with this task
-      await supabase
-        .from("task_tags")
-        .delete()
-        .eq("task_id", taskId);
+      await supabase.from("task_tags").delete().eq("task_id", taskId);
 
       // Mark task as completed
       await supabase
         .from("tasks")
         .update({ status: "completed" })
         .eq("id", taskId);
-      
+
       // optimistic UI: refresh list
       fetchTasks();
     } catch (err) {
