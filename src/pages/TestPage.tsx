@@ -32,11 +32,6 @@ type TaskTableData = {
   staff: string;
 };
 
-type DistrictData = {
-  id: string;
-  name: string;
-};
-
 type TaskTagsTable = {
   task_id: string;
   tag_id: string;
@@ -55,7 +50,6 @@ const siteVisitedTagId = "31a4f755-22c8-447e-937b-a0f918a1cc99";
 const workProgressTagId = "b669453c-2344-4a7b-8c0e-4d8c3aa8d226";
 
 const TestPage = () => {
-  const [excelData, setExcelData] = useState<ExcelSheetData[]>([]);
   const [leftWidth, setLeftWidth] = useState(50); // percentage
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -300,8 +294,6 @@ const TestPage = () => {
           return rowData as ExcelSheetData;
         });
 
-        setExcelData(formattedData);
-
         // Find invalid rows and duplicate numbers
         const { invalidRows: invalidRowsSet, details: invalidDetails } =
           findInvalidRows(formattedData);
@@ -496,7 +488,7 @@ const TestPage = () => {
   };
 
   const handleDownloadDuplicateData = () => {
-   const duplicateDataForDownload = duplicateRowsData.map((dupRow, index) => ({
+   const duplicateDataForDownload = duplicateRowsData.map((dupRow) => ({
     ...dupRow.originalRow,
     "ENTER DATE": dupRow.originalRow["ENTER DATE"],
     "SITE VISIT DATE": dupRow.originalRow["SITE VISIT DATE"],

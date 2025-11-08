@@ -11,7 +11,6 @@ import {
   MapPin,
   Calendar,
   FileText,
-  LogOut,
   X,
   History,
   IndianRupee,
@@ -66,7 +65,6 @@ export default function Home({
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
-  const [isLoadingTags, setIsLoadingTags] = useState(false);
   const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState<
     "all" | "completed" | "pending"
@@ -161,10 +159,8 @@ export default function Home({
   async function fetchMeta() {
     const d = await supabase.from("districts").select("id,name").order("name");
     setDistricts(d.data || []);
-    setIsLoadingTags(true);
     const t = await supabase.from("tags").select("*").order("name");
     setTags(t.data || []);
-    setIsLoadingTags(false);
     // Don't call fetchTasks here - let the useEffect handle it after filters are set
   }
 
@@ -295,12 +291,6 @@ export default function Home({
 
   const handleCall = (phoneNumber: string) => {
     window.open(`tel:${phoneNumber}`, "_self");
-  };
-
-  const handleLogout = async () => {
-    if (confirm("Are you sure you want to log out?")) {
-      await signOut();
-    }
   };
 
   // Toggle a tag in the selectedTags array
